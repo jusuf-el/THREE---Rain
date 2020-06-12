@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=UTF-8 />
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+    <title>Three.js Realistic Rain Tutorial by Red Stapler</title>
+</head>
+
+<body>
+    <script src="js/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, cloudParticles = [],
+            flash, rain, rainGeo, rainCount = 15000;
+
+        function init() {
+            // Creating the scene
+            scene = new THREE.Scene();
+
+            // Creating camera (perspective) - last two parameters are defining viewing frustum of the camera.
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            // Setting position and rotation of the camera (camera is looking up to the sky)
+            camera.position.z = 1;
+            camera.rotation.x = 1.16;
+            camera.rotation.y = -0.12;
+            camera.rotation.z = 0.27;
+
+            // Creating ambient light which will illuminate all objects iin the scene from all directions
+            ambient = new THREE.AmbientLight(0x555555);
+            // Adding the light to the scene
+            scene.add(ambient);
+
+            // Creating directional light which represents the moon light
+            directionalLight = new THREE.DirectionalLight(0xffeedd);
+            // Setting the position of the light
+            directionalLight.position.set(0, 0, 1);
+            // Adding the light to the scene
+            scene.add(directionalLight);
+
+            // Creating flash light using point light
+            flash = new THREE.PointLight(0x062d89, 30, 500, 1.7);
+            // Set position of the light behind the clouds
+            flash.position.set(200, 300, 100);
+            // Adding flash light to the screen
+            scene.add(flash);
+
+            // Creating renderer object
+            renderer = new THREE.WebGLRenderer();
+            // Adding fog to the secene
+            scene.fog = new THREE.FogExp2(0x11111f, 0.002);
+            renderer.setClearColor(scene.fog.color);
+            // Setting size of the renderer
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // Adding renderer object to HTML body
+            document.body.appendChild(renderer.domElement);
+
+            // Creating geometry for rain particle
+            rainGeo = new THREE.Geometry();
+
+            // Creating rain
+            for (let i = 0; i < rainCount; i++) {
+                // Creating rain with lots of vertices (drops) with random position
+                rainDrop = new THREE.Vector3(
+                    Math.random() * 400 - 200,
+                    Math.random() * 500 - 250,
+                    Math.random() * 400 - 200
+                );
+                // Adding velocity to the rain drop to animate the rain
+                rainDrop.velocity = {};
+                rainDrop.velocity = 0;
+                // Adding rain drops to the rain geometry
+                rainGeo.vertices.push(rainDrop);
+            }
+
+            // Creating material for rain
+            rainMaterial = new THREE.PointsMaterial({
+                color: 0xaaaaaa,
+                size: 0.1,
+                transparent: true
+            });
+            // Creating rain object using geometry and material
+            rain = new THREE.Points(rainGeo, rainMaterial);
+            // Adding rain to the scene
+            scene.add(rain);
+
+            // Creating texture loader
+            let loader = new THREE.TextureLoader();
+            // Loading texture and creating geometry for clouds in callback function
+            loader.load("smoke.png", function(texture) {
+                // Creating cloud geometry
+                cloudGeo = new THREE.PlaneBufferGeometry(500, 500);
+                // Creating material for cloud geometry
+                cloudMaterial = new THREE.MeshLambertMaterial({
+                    map: texture,
+                    transparent: true
+                });
+                // Loop for adding clouds to the scene
+                for (let p = 0; p < 25; p++) {
+                    // Creating cloud object
+                    let cloud = new THREE.Mesh(cloudGeo, cloudMaterial);
+                    // Setting postiton of cloud object to face the camera
+                    cloud.position.set(
+                        Math.random() * 800 - 400,
+                        500,
+                        Math.random() * 500 - 450
+                    );
+                    // Setting rotation of cloud object
+                    cloud.rotation.x = 1.16;
+                    cloud.rotation.y = -0.12;
+                    cloud.rotation.z = Math.random() * 360;
+                    cloud.material.opacity = 0.6;
+                    // Saving each cloud particle
+                    cloudParticles.push(cloud);
+                    // Adding cloud to the scene
+                    scene.add(cloud);
+                }
+                animate();
+            });
+        }
+
+        function animate() {
+            // Rotating clouds one by one
+            cloudParticles.forEach(p => {
+                p.rotation.z -= 0.002;
+            });
+
+            // Moving each rain drop and increasing the velocity to simulate the gravity
+            rainGeo.vertices.forEach(p => {
+                p.velocity -= 0.1 + Math.random() * 0.1;
+                p.y += p.velocity;
+                if (p.y < -200) {
+                    p.y = 200;
+                    p.velocity = 0;
+                }
+            });
+            rainGeo.verticesNeedUpdate = true;
+            rain.rotation.y += 0.002;
+
+            // Making flash position and intensity random
+            if (Math.random() > 0.93 || flash.power > 100) {
+                if (flash.power < 100)
+                    flash.position.set(
+                        Math.random() * 400,
+                        300 + Math.random() * 200,
+                        100
+                    );
+                flash.power = 50 + Math.random() * 500;
+            }
+            // Rendering the scene and camera
+            renderer.render(scene, camera);
+            // Recursion
+            requestAnimationFrame(animate);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
